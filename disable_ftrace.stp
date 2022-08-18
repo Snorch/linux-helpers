@@ -1,0 +1,30 @@
+#! /usr/bin/env stap
+# usage: stap disable_ftrace.stp <syscall>  <condition>
+# e.g. : stap disable_ftrace.stp sys_preadv '$return == -13'
+# systemtap requirements:
+# yum install systemtap systemtap-runtime gcc vzkernel-devel; debuginfo-install vzkernel
+
+global counts
+
+probe kernel.function(@1).return {
+  /* Supports setting pid to trace via stap -x */
+  if (target() && !target_set_pid(pid())) next;
+  if ($2) {
+      /* Print info about the hit */
+      printf("\n%s[%d] kernel.function(%s) $return: %s\n", execname(), tid(), @1, $return$)
+      counts["hit"] <<< 1
+      /* Disable tracing, note it is not executed imediately,
+       * so we can still lose traces */
+      system("echo 0 > /sys/kernel/debug/tracing/tracing_on")
+    } else {
+      counts["miss"] <<< 1
+    }
+}
+
+probe end,error {
+  /* Print overal statistics of hits and misses */
+  printf("\nstatistics:\n")
+  foreach (reason+ in counts) {
+    printf("%s count: %d\n", reason, @count(counts[reason]))
+  }
+}
