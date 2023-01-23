@@ -37,8 +37,8 @@ echo funcgraph-tail > /sys/kernel/debug/tracing/trace_options 2>/dev/null
 echo funcgraph-abstime > /sys/kernel/debug/tracing/trace_options
 echo nofuncgraph-irqs > /sys/kernel/debug/tracing/trace_options
 
-# Set max recursion to 5, change if need more
-echo 5 > /sys/kernel/debug/tracing/max_graph_depth
+# Set max recursion to 5, use it to shorten too wide output
+# echo 5 > /sys/kernel/debug/tracing/max_graph_depth
 
 finish_trace() {
 	echo 0 > /sys/kernel/debug/tracing/tracing_on
