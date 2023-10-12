@@ -1,0 +1,35 @@
+#!/bin/bash
+AUTHOR_FILTER="\<\(snorcht@gmail.com\|ptikhomirov@odin.com\|ptikhomirov@parallels.com\|ptikhomirov@virtuozzo.com\)\>"
+
+while [ True ]; do
+	if [ "$1" = "--author" -o "$1" = "-a" ]; then
+		AUTHOR_FILTER=$2
+		shift 2
+	elif [ "$1" = "--since" -o "$1" = "-s" ]; then
+		DATE_SINCE=$2
+		shift 2
+	elif [ "$1" = "--until" -o "$1" = "-u" ]; then
+		DATE_UNTIL=$2
+		shift 2
+	else
+		break
+	fi
+done
+
+if [ "$#" -ne 0 ]; then
+	echo "usage: $0 [--author <git_author_regexp>] [--since <YYYY-MM-DD>] [--until <YYYY-MM-DD>]"
+	exit 1
+fi
+
+if [ -z "$DATE_SINCE" -a -z "$DATE_UNTIL" ]; then
+	git log --date=iso --pretty=format:'%ad %h %ae %s' --author="$AUTHOR_FILTER"
+elif [ -z "$DATE_UNTIL" ]; then
+	git log --date=iso --pretty=format:'%ad %h %ae %s' --author="$AUTHOR_FILTER" \
+		| awk '$0 >= "'"$DATE_SINCE"'"'
+elif [ -z "$DATE_SINCE" ]; then
+	git log --date=iso --pretty=format:'%ad %h %ae %s' --author="$AUTHOR_FILTER" \
+		| awk '$0 <= "'"$DATE_UNTIL"'"'
+else
+	git log --date=iso --pretty=format:'%ad %h %ae %s' --author="$AUTHOR_FILTER" \
+		| awk '$0 >= "'"$DATE_SINCE"'" && $0 <= "'"$DATE_UNTIL"'"'
+fi
