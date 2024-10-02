@@ -1,0 +1,25 @@
+#!/bin/bash
+
+if [ "$#" -ne 1 ]; then
+	echo "usage: $0 <package_name>"
+	exit 1
+fi
+PACKAGE_NAME=$1
+IMAGE_NAME="fedora_build_environment_$PACKAGE_NAME"
+
+sudo docker build -t $IMAGE_NAME - <<EOF
+FROM fedora:latest
+RUN dnf install -y bash git vim which
+RUN dnf install -y glibc-static
+RUN dnf install -y 'dnf-command(builddep)'
+RUN dnf builddep -y $PACKAGE_NAME
+RUN yum clean all
+
+# Add my kernel build scripts
+RUN git clone https://github.com/Snorch/ovzhelpers.git && cd ovzhelpers && ./install.sh
+EOF
+
+sudo docker run -it --rm --user "$(id -u):$(id -g)" --network=host \
+	-v "$PWD:/${PWD##*/}" \
+	-w "/${PWD##*/}" \
+	$IMAGE_NAME bash
