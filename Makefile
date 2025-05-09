@@ -1,8 +1,9 @@
 CFLAGS += -Wall
 
-bindmount-v2:
+all: bindmount-v2 mount_set_group
 
-all: bindmount-v2
+bindmount-v2:
+mount_set_group:
 
 clean:
-	rm -f bindmount-v2
+	rm -f bindmount-v2 mount_set_group
