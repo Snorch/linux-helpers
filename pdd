@@ -1,0 +1,42 @@
+#!/bin/bash
+# This script is intended to parallelize dd into NRCPU threads
+# Note: it only understands skip, seek and count arguments, any custom
+# iseek/oseek will lead to unexpected results
+# Usage example: pdd if=/dev/zero of=/dev/null bs=4K count=1024
+
+NTHREADS="$(nproc)"
+SKIP=0
+SEEK=0
+COUNT=0
+ARGS=""
+
+for ARG in "$@"
+do
+	if [[ "$ARG" == skip=* ]]; then
+		SKIP=${ARG#"skip="}
+	elif [[ "$ARG" == seek=* ]]; then
+		SEEK=${ARG#"seek="}
+	elif [[ "$ARG" == count=* ]]; then
+		COUNT=${ARG#"count="}
+	else
+		if [ -z "$ARGS" ]; then
+			ARGS="$ARG"
+		else
+			ARGS="$ARGS $ARG"
+		fi
+	fi
+done
+
+STEP=$((COUNT / NTHREADS))
+REM=$((COUNT % NTHREADS))
+PIDS=()
+
+for (( i=0; i<NTHREADS; i++ )); do
+	echo "dd $ARGS skip=$((SKIP + i * STEP)) seek=$((SEEK + i * STEP)) count=$((STEP + (i == NTHREADS - 1 ? REM : 0))) &"
+	dd $ARGS skip=$((SKIP + i * STEP)) seek=$((SEEK + i * STEP)) count=$((STEP + (i == NTHREADS - 1 ? REM : 0))) &
+	PIDS[${i}]=$!
+done
+
+for PID in ${PIDS[*]}; do
+    wait $PID
+done
