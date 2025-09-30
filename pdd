@@ -29,14 +29,31 @@ done
 
 STEP=$((COUNT / NTHREADS))
 REM=$((COUNT % NTHREADS))
-PIDS=()
+PIPES=()
+
+do_one_dd() {
+	exec {pipe_r}>&-
+	echo "dd $ARGS skip=$((SKIP + i * STEP)) seek=$((SEEK + i * STEP)) count=$((STEP + (i == NTHREADS - 1 ? REM : 0))) &" >&$pipe_w 2>&1
+	dd $ARGS skip=$((SKIP + i * STEP)) seek=$((SEEK + i * STEP)) count=$((STEP + (i == NTHREADS - 1 ? REM : 0))) >&$pipe_w 2>&1
+	exec {pipe_w}>&-
+}
 
 for (( i=0; i<NTHREADS; i++ )); do
-	echo "dd $ARGS skip=$((SKIP + i * STEP)) seek=$((SEEK + i * STEP)) count=$((STEP + (i == NTHREADS - 1 ? REM : 0))) &"
-	dd $ARGS skip=$((SKIP + i * STEP)) seek=$((SEEK + i * STEP)) count=$((STEP + (i == NTHREADS - 1 ? REM : 0))) &
-	PIDS[${i}]=$!
+	exec {pipe}<> <(:)
+	exec {pipe_r}</proc/self/fd/$pipe
+	exec {pipe_w}>/proc/self/fd/$pipe
+	exec {pipe}>&-
+
+	do_one_dd &
+	exec {pipe_w}>&-
+	PIPES[${i}]=$pipe_r
 done
 
-for PID in ${PIDS[*]}; do
-    wait $PID
+trap
+
+for pipe_r in ${PIPES[*]}; do
+	while read -r line <&$pipe_r; do
+		echo "$line"
+	done
+	exec {pipe_r}>&-
 done
