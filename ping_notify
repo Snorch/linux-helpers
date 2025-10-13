@@ -1,0 +1,26 @@
+#!/bin/bash
+set -e
+
+if [ "$#" -ne 1 ]; then
+	echo "usage: $0 <node_ip>"
+	exit 1
+fi
+IP=$1
+
+while :; do
+	if ping $IP -c1 &>/dev/null; then
+		echo "Waiting for stop"
+		while ping $IP -c1 &>/dev/null; do
+			sleep 1;
+		done
+		echo "Node $IP stopped";
+		notify-send "Node $IP stopped" "!!!"
+	else
+		echo "Waiting for start"
+		while ! ping $IP -c1 &>/dev/null; do
+			sleep 1;
+		done
+		echo "Node $IP started";
+		notify-send "Node $IP started" "!!!"
+	fi
+done
